@@ -6,17 +6,18 @@ import (
 	"io"
 
 	cmds "github.com/ipfs/go-ipfs/commands"
+	e "github.com/ipfs/go-ipfs/core/commands/e"
 	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap"
 	decision "github.com/ipfs/go-ipfs/exchange/bitswap/decision"
+	cmdkit "gx/ipfs/QmPMeikDc7tQEDvaS66j1bVPQ2jBkvFwz3Qom5eA5i4xip/go-ipfs-cmdkit"
 
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize"
-	u "gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 )
 
 var BitswapCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
+	Helptext: cmdkit.HelpText{
 		Tagline:          "Interact with the bitswap agent.",
 		ShortDescription: ``,
 	},
@@ -30,27 +31,27 @@ var BitswapCmd = &cmds.Command{
 }
 
 var unwantCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
+	Helptext: cmdkit.HelpText{
 		Tagline: "Remove a given block from your wantlist.",
 	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("key", true, true, "Key(s) to remove from your wantlist.").EnableStdin(),
+	Arguments: []cmdkit.Argument{
+		cmdkit.StringArg("key", true, true, "Key(s) to remove from your wantlist.").EnableStdin(),
 	},
 	Run: func(req cmds.Request, res cmds.Response) {
 		nd, err := req.InvocContext().GetNode()
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
 
 		if !nd.OnlineMode() {
-			res.SetError(errNotOnline, cmds.ErrClient)
+			res.SetError(errNotOnline, cmdkit.ErrClient)
 			return
 		}
 
 		bs, ok := nd.Exchange.(*bitswap.Bitswap)
 		if !ok {
-			res.SetError(u.ErrCast(), cmds.ErrNormal)
+			res.SetError(e.TypeErr(bs, nd.Exchange), cmdkit.ErrNormal)
 			return
 		}
 
@@ -58,7 +59,7 @@ var unwantCmd = &cmds.Command{
 		for _, arg := range req.Arguments() {
 			c, err := cid.Decode(arg)
 			if err != nil {
-				res.SetError(err, cmds.ErrNormal)
+				res.SetError(err, cmdkit.ErrNormal)
 				return
 			}
 
@@ -74,42 +75,42 @@ var unwantCmd = &cmds.Command{
 }
 
 var showWantlistCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
+	Helptext: cmdkit.HelpText{
 		Tagline: "Show blocks currently on the wantlist.",
 		ShortDescription: `
 Print out all blocks currently on the bitswap wantlist for the local peer.`,
 	},
-	Options: []cmds.Option{
-		cmds.StringOption("peer", "p", "Specify which peer to show wantlist for. Default: self."),
+	Options: []cmdkit.Option{
+		cmdkit.StringOption("peer", "p", "Specify which peer to show wantlist for. Default: self."),
 	},
 	Type: KeyList{},
 	Run: func(req cmds.Request, res cmds.Response) {
 		nd, err := req.InvocContext().GetNode()
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
 
 		if !nd.OnlineMode() {
-			res.SetError(errNotOnline, cmds.ErrClient)
+			res.SetError(errNotOnline, cmdkit.ErrClient)
 			return
 		}
 
 		bs, ok := nd.Exchange.(*bitswap.Bitswap)
 		if !ok {
-			res.SetError(u.ErrCast(), cmds.ErrNormal)
+			res.SetError(e.TypeErr(bs, nd.Exchange), cmdkit.ErrNormal)
 			return
 		}
 
 		pstr, found, err := req.Option("peer").String()
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
 		if found {
 			pid, err := peer.IDB58Decode(pstr)
 			if err != nil {
-				res.SetError(err, cmds.ErrNormal)
+				res.SetError(err, cmdkit.ErrNormal)
 				return
 			}
 			if pid == nd.Identity {
@@ -128,7 +129,7 @@ Print out all blocks currently on the bitswap wantlist for the local peer.`,
 }
 
 var bitswapStatCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
+	Helptext: cmdkit.HelpText{
 		Tagline:          "Show some diagnostic information on the bitswap agent.",
 		ShortDescription: ``,
 	},
@@ -136,24 +137,24 @@ var bitswapStatCmd = &cmds.Command{
 	Run: func(req cmds.Request, res cmds.Response) {
 		nd, err := req.InvocContext().GetNode()
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
 
 		if !nd.OnlineMode() {
-			res.SetError(errNotOnline, cmds.ErrClient)
+			res.SetError(errNotOnline, cmdkit.ErrClient)
 			return
 		}
 
 		bs, ok := nd.Exchange.(*bitswap.Bitswap)
 		if !ok {
-			res.SetError(u.ErrCast(), cmds.ErrNormal)
+			res.SetError(e.TypeErr(bs, nd.Exchange), cmdkit.ErrNormal)
 			return
 		}
 
 		st, err := bs.Stat()
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
 
@@ -161,9 +162,14 @@ var bitswapStatCmd = &cmds.Command{
 	},
 	Marshalers: cmds.MarshalerMap{
 		cmds.Text: func(res cmds.Response) (io.Reader, error) {
-			out, ok := res.Output().(*bitswap.Stat)
+			v, err := unwrapOutput(res.Output())
+			if err != nil {
+				return nil, err
+			}
+
+			out, ok := v.(*bitswap.Stat)
 			if !ok {
-				return nil, u.ErrCast()
+				return nil, e.TypeErr(out, v)
 			}
 			buf := new(bytes.Buffer)
 			fmt.Fprintln(buf, "bitswap status")
@@ -188,7 +194,7 @@ var bitswapStatCmd = &cmds.Command{
 }
 
 var ledgerCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
+	Helptext: cmdkit.HelpText{
 		Tagline: "Show the current ledger for a peer.",
 		ShortDescription: `
 The Bitswap decision engine tracks the number of bytes exchanged between IPFS
@@ -196,41 +202,47 @@ nodes, and stores this information as a collection of ledgers. This command
 prints the ledger associated with a given peer.
 `,
 	},
-	Arguments: []cmds.Argument{
-		cmds.StringArg("peer", true, false, "The PeerID (B58) of the ledger to inspect."),
+	Arguments: []cmdkit.Argument{
+		cmdkit.StringArg("peer", true, false, "The PeerID (B58) of the ledger to inspect."),
 	},
 	Type: decision.Receipt{},
 	Run: func(req cmds.Request, res cmds.Response) {
 		nd, err := req.InvocContext().GetNode()
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
 
 		if !nd.OnlineMode() {
-			res.SetError(errNotOnline, cmds.ErrClient)
+			res.SetError(errNotOnline, cmdkit.ErrClient)
 			return
 		}
 
 		bs, ok := nd.Exchange.(*bitswap.Bitswap)
 		if !ok {
-			res.SetError(u.ErrCast(), cmds.ErrNormal)
+			res.SetError(e.TypeErr(bs, nd.Exchange), cmdkit.ErrNormal)
 			return
 		}
 
 		partner, err := peer.IDB58Decode(req.Arguments()[0])
 		if err != nil {
-			res.SetError(err, cmds.ErrClient)
+			res.SetError(err, cmdkit.ErrClient)
 			return
 		}
 		res.SetOutput(bs.LedgerForPeer(partner))
 	},
 	Marshalers: cmds.MarshalerMap{
 		cmds.Text: func(res cmds.Response) (io.Reader, error) {
-			out, ok := res.Output().(*decision.Receipt)
-			if !ok {
-				return nil, u.ErrCast()
+			v, err := unwrapOutput(res.Output())
+			if err != nil {
+				return nil, err
 			}
+
+			out, ok := v.(*decision.Receipt)
+			if !ok {
+				return nil, e.TypeErr(out, v)
+			}
+
 			buf := new(bytes.Buffer)
 			fmt.Fprintf(buf, "Ledger for %s\n"+
 				"Debt ratio:\t%f\n"+
@@ -245,7 +257,7 @@ prints the ledger associated with a given peer.
 }
 
 var reprovideCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
+	Helptext: cmdkit.HelpText{
 		Tagline: "Trigger reprovider.",
 		ShortDescription: `
 Trigger reprovider to announce our data to network.
@@ -254,19 +266,21 @@ Trigger reprovider to announce our data to network.
 	Run: func(req cmds.Request, res cmds.Response) {
 		nd, err := req.InvocContext().GetNode()
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
 
 		if !nd.OnlineMode() {
-			res.SetError(errNotOnline, cmds.ErrClient)
+			res.SetError(errNotOnline, cmdkit.ErrClient)
 			return
 		}
 
 		err = nd.Reprovider.Trigger(req.Context())
 		if err != nil {
-			res.SetError(err, cmds.ErrNormal)
+			res.SetError(err, cmdkit.ErrNormal)
 			return
 		}
+
+		res.SetOutput(nil)
 	},
 }
